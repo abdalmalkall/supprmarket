@@ -29,14 +29,12 @@ const Index = () => {
     { ...CATEGORIES[4], ...sales },
   ];
 
-  // إضافة تلقائية لكل فئة عند التحميل إذا كانت فارغة
   useEffect(() => {
-    cats.forEach((c) => {
-      if (c.entries.length === 0) {
-        // هنا نضيف قيمة افتراضية 0 أو أي قيمة تريدها
-        c.addEntry(0);
-      }
-    });
+    cash.clearEntries();
+    purchases.clearEntries();
+    balance.clearEntries();
+    tobacco.clearEntries();
+    sales.clearEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

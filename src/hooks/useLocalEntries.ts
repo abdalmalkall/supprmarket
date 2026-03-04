@@ -37,7 +37,11 @@ export function useLocalEntries(key: string) {
 
   const total = entries.reduce((sum, e) => sum + e.amount, 0);
 
-  return { entries, addEntry, deleteEntry, total };
+  const clearEntries = () => {
+    setEntries([]);
+  };
+
+  return { entries, addEntry, deleteEntry, clearEntries, total };
 }
 
 export { getToday };
