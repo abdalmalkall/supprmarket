@@ -25,7 +25,7 @@ const Index = () => {
     { ...CATEGORIES[3], ...tobacco },
   ];
 
-  const reportRef = useRef<HTMLDivElement>(null);
+  
 
   const grandTotal = cats.reduce((s, c) => s + c.total, 0);
 
