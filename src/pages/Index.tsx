@@ -31,21 +31,61 @@ const Index = () => {
   const grandTotal = cats.reduce((s, c) => s + c.total, 0);
 
   const handleExport = useCallback(async () => {
-    if (!reportRef.current) return;
-    reportRef.current.style.display = "block";
+    // Create a temporary container that's visible but off-screen
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.left = "-9999px";
+    container.style.top = "0";
+    container.style.zIndex = "-1";
+    document.body.appendChild(container);
+
+    // Create the report content
+    const reportEl = document.createElement("div");
+    reportEl.dir = "rtl";
+    reportEl.style.fontFamily = "'IBM Plex Sans Arabic', sans-serif";
+    reportEl.style.backgroundColor = "#ffffff";
+    reportEl.style.color = "#000000";
+    reportEl.style.padding = "32px";
+    reportEl.style.width = "400px";
+
+    const today = getToday();
+    const totalsData = cats.map((c) => ({ label: c.label, amount: c.total }));
+
+    reportEl.innerHTML = `
+      <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:24px;">
+        <h2 style="font-size:20px;font-weight:bold;margin:0 0 4px 0;">التقرير اليومي</h2>
+        <p style="font-size:14px;color:#666;margin:0;">تاريخ اليوم: ${today}</p>
+      </div>
+      <div style="margin-bottom:24px;">
+        ${totalsData.map((t) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #ddd;">
+            <span style="font-weight:600;">${t.label}</span>
+            <span style="font-weight:bold;">${t.amount.toLocaleString("ar-EG")}</span>
+          </div>
+        `).join("")}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:2px solid #000;">
+        <span style="font-size:18px;font-weight:bold;">المجموع الكلي</span>
+        <span style="font-size:20px;font-weight:bold;">${grandTotal.toLocaleString("ar-EG")}</span>
+      </div>
+      <p style="text-align:center;font-size:12px;color:#999;margin-top:24px;">— نظام المحاسبة اليومية —</p>
+    `;
+
+    container.appendChild(reportEl);
+
     try {
-      const canvas = await html2canvas(reportRef.current, {
+      const canvas = await html2canvas(reportEl, {
         backgroundColor: "#ffffff",
         scale: 2,
       });
       const link = document.createElement("a");
-      link.download = `تقرير-${getToday().replace(/\//g, "-")}.png`;
+      link.download = `تقرير-${today.replace(/\//g, "-")}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
     } finally {
-      reportRef.current.style.display = "none";
+      document.body.removeChild(container);
     }
-  }, []);
+  }, [cats, grandTotal]);
 
   return (
     <div className="min-h-screen pb-12">
@@ -82,15 +122,6 @@ const Index = () => {
         </Button>
       </main>
 
-      {/* Hidden report for export */}
-      <div style={{ display: "none" }}>
-        <SummaryReport
-          ref={reportRef}
-          date={`تاريخ اليوم: ${getToday()}`}
-          totals={cats.map((c) => ({ label: c.label, amount: c.total }))}
-          grandTotal={grandTotal}
-        />
-      </div>
     </div>
   );
 };
