@@ -27,8 +27,8 @@ export function useLocalEntries(key: string) {
     localStorage.setItem(key, JSON.stringify(entries));
   }, [entries, key]);
 
-  const addEntry = (amount: number) => {
-    setEntries((prev) => [...prev, { date: getToday(), amount }]);
+  const addEntry = (amount: number, date?: string) => {
+    setEntries((prev) => [...prev, { date: date ?? getToday(), amount }]);
   };
 
   const deleteEntry = (index: number) => {
