@@ -1,9 +1,8 @@
-import { useRef, useCallback } from "react";
+import { useCallback } from "react";
 import html2canvas from "html2canvas";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
-import SummaryReport from "@/components/SummaryReport";
 import { useLocalEntries, getToday } from "@/hooks/useLocalEntries";
 
 const CATEGORIES = [
