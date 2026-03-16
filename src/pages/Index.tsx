@@ -1,7 +1,6 @@
 import { useEffect, useCallback, useState } from "react";
-import html2canvas from "html2canvas";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Send } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import { useLocalEntries, getToday } from "@/hooks/useLocalEntries";
 import HijriDate from "hijri-date/lib/safe";
@@ -15,6 +14,7 @@ const CATEGORIES = [
 ] as const;
 
 const DATE_STORAGE_KEY = "accounting_selected_date";
+const WHATSAPP_NUMBER = "962788888781";
 
 function getTodayIso(): string {
   const d = new Date();
@@ -70,61 +70,29 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleExport = useCallback(async () => {
-    const container = document.createElement("div");
-    container.style.position = "fixed";
-    container.style.left = "-9999px";
-    container.style.top = "0";
-    container.style.zIndex = "-1";
-    document.body.appendChild(container);
+  const handleSendWhatsApp = useCallback(() => {
+    const displayDate = isoToDisplayDate(selectedDate);
+    const hijriDate = new HijriDate(new Date(selectedDate));
+    const hijriDateStr = `${hijriDate.getDate()} / ${hijriDate.getMonth() + 1} / ${hijriDate.getFullYear()}`;
 
-    const reportEl = document.createElement("div");
-    reportEl.dir = "rtl";
-    reportEl.style.fontFamily = "'IBM Plex Sans Arabic', sans-serif";
-    reportEl.style.backgroundColor = "#ffffff";
-    reportEl.style.color = "#000000";
-    reportEl.style.padding = "32px";
-    reportEl.style.width = "400px";
+    const totalsText = cats
+      .map((c) => `${c.label}: ${c.total.toLocaleString("ar-EG")}`)
+      .join("\n");
 
-    const today = isoToDisplayDate(selectedDate);
-    const hijriToday = new HijriDate();
-    const hijriDateStr = `${hijriToday.getDate()} / ${hijriToday.getMonth() + 1} / ${hijriToday.getFullYear()}`;
+    const message = [
+      "التقرير اليومي",
+      `التاريخ الميلادي: ${displayDate}`,
+      `التاريخ الهجري: ${hijriDateStr}`,
+      "",
+      totalsText,
+      "",
+      "— نظام المحاسبة اليومية —",
+    ].join("\n");
 
-    const totalsData = cats.map((c) => ({ label: c.label, amount: c.total }));
-
-    reportEl.innerHTML = `
-      <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:24px;">
-        <h2 style="font-size:20px;font-weight:bold;margin:0 0 4px 0;">التقرير اليومي</h2>
-        <p style="font-size:14px;color:#666;margin:0;">
-          التاريخ الميلادي: ${today} <br/>
-          التاريخ الهجري: ${hijriDateStr}
-        </p>
-      </div>
-      <div style="margin-bottom:24px;">
-        ${totalsData.map((t) => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #ddd;">
-            <span style="font-weight:600;">${t.label}</span>
-            <span style="font-weight:bold;">${t.amount.toLocaleString("ar-EG")}</span>
-          </div>
-        `).join("")}
-      </div>
-      <p style="text-align:center;font-size:12px;color:#999;margin-top:24px;">— نظام المحاسبة اليومية —</p>
-    `;
-
-    container.appendChild(reportEl);
-
-    try {
-      const canvas = await html2canvas(reportEl, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-      });
-      const link = document.createElement("a");
-      link.download = `تقرير-${today.replace(/\//g, "-")}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    } finally {
-      document.body.removeChild(container);
-    }
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      message
+    )}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   }, [cats, selectedDate]);
 
   return (
@@ -158,12 +126,12 @@ const Index = () => {
         ))}
 
         <Button
-          onClick={handleExport}
+          onClick={handleSendWhatsApp}
           size="lg"
           className="w-full gap-2 text-base"
         >
-          <Download className="h-5 w-5" />
-          حفظ التقرير كصورة
+          <Send className="h-5 w-5" />
+          إرسال التقرير واتساب
         </Button>
       </main>
     </div>
