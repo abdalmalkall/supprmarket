@@ -15,6 +15,45 @@ const CATEGORIES = [
 
 const DATE_STORAGE_KEY = "accounting_selected_date";
 const WHATSAPP_NUMBER = "962788888781";
+const HIJRI_MONTHS = [
+  "محرم",
+  "صفر",
+  "ربيع الأول",
+  "ربيع الآخر",
+  "جمادى الأولى",
+  "جمادى الآخرة",
+  "رجب",
+  "شعبان",
+  "رمضان",
+  "شوال",
+  "ذو القعدة",
+  "ذو الحجة",
+];
+
+function getHijriMonthName(monthIndex: number): string {
+  return HIJRI_MONTHS[monthIndex] || "";
+}
+
+function getHijriMonthAndDay(date: Date): { month: string; day: string } {
+  const adjusted = new Date(date);
+  adjusted.setDate(adjusted.getDate() - 1);
+  try {
+    const parts = new Intl.DateTimeFormat(
+      "ar-SA-u-ca-islamic-nu-latn",
+      { month: "long", day: "numeric" }
+    ).formatToParts(adjusted);
+    const month = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    if (month && day) return { month, day };
+  } catch {
+    // fallback below
+  }
+  const hijri = new HijriDate(adjusted);
+  return {
+    month: getHijriMonthName(hijri.getMonth()),
+    day: String(hijri.getDate()),
+  };
+}
 
 function getTodayIso(): string {
   const d = new Date();
@@ -28,6 +67,15 @@ function isoToDisplayDate(isoDate: string): string {
   const [yyyy, mm, dd] = isoDate.split("-");
   if (!yyyy || !mm || !dd) return getToday();
   return `${dd}/${mm}/${yyyy}`;
+}
+
+function parseLocalDate(isoDate: string): Date {
+  const [yyyy, mm, dd] = isoDate.split("-");
+  const year = Number(yyyy);
+  const month = Number(mm);
+  const day = Number(dd);
+  if (!year || !month || !day) return new Date();
+  return new Date(year, month - 1, day);
 }
 
 const Index = () => {
@@ -71,22 +119,39 @@ const Index = () => {
   }, []);
 
   const handleSendWhatsApp = useCallback(() => {
-    const displayDate = isoToDisplayDate(selectedDate);
-    const hijriDate = new HijriDate(new Date(selectedDate));
-    const hijriDateStr = `${hijriDate.getDate()} / ${hijriDate.getMonth() + 1} / ${hijriDate.getFullYear()}`;
+    const selected = parseLocalDate(selectedDate);
+    const displayDate = `${selected.getDate()}/${
+      selected.getMonth() + 1
+    }/${selected.getFullYear()}`;
 
-    const totalsText = cats
-      .map((c) => `${c.label}: ${c.total.toLocaleString("ar-EG")}`)
-      .join("\n");
+    const hijriParts = getHijriMonthAndDay(selected);
+    const hijriDateStr = `${hijriParts.month} ${hijriParts.day}`;
+
+    const padLine = (label: string, amount: number, amountFirst = false) => {
+      const amountStr = amount.toLocaleString("en-US");
+      const targetWidth = 24;
+      if (amountFirst) {
+        const spaces = " ".repeat(
+          Math.max(1, targetWidth - amountStr.length)
+        );
+        return `${amountStr}${spaces}${label}`;
+      }
+      const spaces = " ".repeat(
+        Math.max(1, targetWidth - label.length)
+      );
+      return `${label}${spaces}${amountStr}`;
+    };
+
+    const totalsByKey = new Map(cats.map((c) => [c.key, c.total]));
 
     const message = [
-      "التقرير اليومي",
-      `التاريخ الميلادي: ${displayDate}`,
-      `التاريخ الهجري: ${hijriDateStr}`,
-      "",
-      totalsText,
-      "",
-      "— نظام المحاسبة اليومية —",
+      displayDate,
+      hijriDateStr,
+      padLine("نقدي", totalsByKey.get("cash") || 0),
+      padLine("مشتريات", totalsByKey.get("purchases") || 0),
+      padLine("رصيد", totalsByKey.get("balance") || 0),
+      padLine("دخان", totalsByKey.get("tobacco") || 0),
+      padLine("مبيعات", totalsByKey.get("sales") || 0, true),
     ].join("\n");
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
