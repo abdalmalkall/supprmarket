@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import { useLocalEntries, getToday } from "@/hooks/useLocalEntries";
-import HijriDate from "hijri-date/lib/safe";
 
 const CATEGORIES = [
   { key: "cash", label: "نقدي" },
@@ -13,47 +12,7 @@ const CATEGORIES = [
   { key: "sales", label: "المبيعات" },
 ] as const;
 
-const DATE_STORAGE_KEY = "accounting_selected_date";
 const WHATSAPP_NUMBER = "962788888781";
-const HIJRI_MONTHS = [
-  "محرم",
-  "صفر",
-  "ربيع الأول",
-  "ربيع الآخر",
-  "جمادى الأولى",
-  "جمادى الآخرة",
-  "رجب",
-  "شعبان",
-  "رمضان",
-  "شوال",
-  "ذو القعدة",
-  "ذو الحجة",
-];
-
-function getHijriMonthName(monthIndex: number): string {
-  return HIJRI_MONTHS[monthIndex] || "";
-}
-
-function getHijriMonthAndDay(date: Date): { month: string; day: string } {
-  const adjusted = new Date(date);
-  adjusted.setDate(adjusted.getDate() - 1);
-  try {
-    const parts = new Intl.DateTimeFormat(
-      "ar-SA-u-ca-islamic-nu-latn",
-      { month: "long", day: "numeric" }
-    ).formatToParts(adjusted);
-    const month = parts.find((p) => p.type === "month")?.value;
-    const day = parts.find((p) => p.type === "day")?.value;
-    if (month && day) return { month, day };
-  } catch {
-    // fallback below
-  }
-  const hijri = new HijriDate(adjusted);
-  return {
-    month: getHijriMonthName(hijri.getMonth()),
-    day: String(hijri.getDate()),
-  };
-}
 
 function getTodayIso(): string {
   const d = new Date();
@@ -69,23 +28,8 @@ function isoToDisplayDate(isoDate: string): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-function parseLocalDate(isoDate: string): Date {
-  const [yyyy, mm, dd] = isoDate.split("-");
-  const year = Number(yyyy);
-  const month = Number(mm);
-  const day = Number(dd);
-  if (!year || !month || !day) return new Date();
-  return new Date(year, month - 1, day);
-}
-
 const Index = () => {
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    try {
-      return localStorage.getItem(DATE_STORAGE_KEY) || getTodayIso();
-    } catch {
-      return getTodayIso();
-    }
-  });
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayIso());
 
   const cash = useLocalEntries("accounting_cash");
   const purchases = useLocalEntries("accounting_purchases");
@@ -102,12 +46,14 @@ const Index = () => {
   ];
 
   useEffect(() => {
-    try {
-      localStorage.setItem(DATE_STORAGE_KEY, selectedDate);
-    } catch {
-      // no-op
-    }
-  }, [selectedDate]);
+    const tick = () => {
+      const today = getTodayIso();
+      setSelectedDate((prev) => (prev === today ? prev : today));
+    };
+    tick();
+    const id = window.setInterval(tick, 60 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     cash.clearEntries();
@@ -119,13 +65,7 @@ const Index = () => {
   }, []);
 
   const handleSendWhatsApp = useCallback(() => {
-    const selected = parseLocalDate(selectedDate);
-    const displayDate = `${selected.getDate()}/${
-      selected.getMonth() + 1
-    }/${selected.getFullYear()}`;
-
-    const hijriParts = getHijriMonthAndDay(selected);
-    const hijriDateStr = `${hijriParts.month} ${hijriParts.day}`;
+    const displayDate = isoToDisplayDate(selectedDate);
 
     const padLine = (label: string, amount: number, amountFirst = false) => {
       const amountStr = amount.toLocaleString("en-US");
@@ -146,7 +86,6 @@ const Index = () => {
 
     const message = [
       displayDate,
-      hijriDateStr,
       padLine("نقدي", totalsByKey.get("cash") || 0),
       padLine("مشتريات", totalsByKey.get("purchases") || 0),
       padLine("رصيد", totalsByKey.get("balance") || 0),
@@ -170,7 +109,8 @@ const Index = () => {
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              readOnly
+              disabled
               className="rounded border border-white/30 bg-white/10 px-2 py-1 text-primary-foreground"
             />
           </div>
