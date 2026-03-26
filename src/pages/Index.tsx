@@ -3,9 +3,23 @@ import { arSA } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalEntries, getToday } from "@/hooks/useLocalEntries";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const CATEGORIES = [
   { key: "cash", label: "نقدي" },
@@ -48,6 +62,7 @@ const Index = () => {
   const [selectedDate, setSelectedDate] = useState<string>(getTodayIso());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [pendingWhatsAppSend, setPendingWhatsAppSend] = useState(false);
+  const isMobile = useIsMobile();
 
   const cash = useLocalEntries("accounting_cash");
   const purchases = useLocalEntries("accounting_purchases");
@@ -125,6 +140,40 @@ const Index = () => {
     setCalendarOpen(true);
   }, []);
 
+  const calendarNode = (
+    <Calendar
+      mode="single"
+      selected={isoToDate(selectedDate)}
+      onSelect={handleDateChange}
+      locale={arSA}
+      dir="rtl"
+      className="rounded-[22px] bg-white"
+      classNames={{
+        months: "flex",
+        month: "space-y-4",
+        caption: "flex items-center justify-between px-2 pt-2",
+        caption_label: "text-base font-semibold text-slate-900",
+        nav: "flex items-center gap-2",
+        nav_button:
+          "h-9 w-9 rounded-full border border-slate-200 bg-white p-0 text-slate-700 opacity-100 hover:bg-slate-100",
+        nav_button_previous: "static",
+        nav_button_next: "static",
+        head_row: "mt-2 flex w-full justify-between",
+        head_cell:
+          "w-10 text-center text-xs font-semibold text-slate-400",
+        row: "mt-2 flex w-full justify-between",
+        cell: "h-10 w-10 p-0 text-center text-sm",
+        day:
+          "h-10 w-10 rounded-2xl text-sm font-medium text-slate-700 hover:bg-slate-100",
+        day_today:
+          "bg-slate-100 text-slate-900 ring-1 ring-slate-200",
+        day_selected:
+          "bg-slate-900 text-white hover:bg-slate-900 hover:text-white focus:bg-slate-900 focus:text-white",
+        day_outside: "text-slate-300 opacity-60",
+      }}
+    />
+  );
+
   return (
     <div className="min-h-screen pb-12">
       <header className="sticky top-0 z-10 bg-primary text-primary-foreground py-4 px-4 shadow-sm">
@@ -146,58 +195,53 @@ const Index = () => {
           />
         ))}
 
-        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-          <PopoverTrigger asChild>
-            <button type="button" className="hidden" aria-hidden="true" />
-          </PopoverTrigger>
-          <PopoverContent
-            align="center"
-            side="top"
-            sideOffset={12}
-            className="w-auto rounded-[28px] border-white/10 bg-white p-2 text-foreground shadow-[0_24px_80px_rgba(15,23,42,0.22)]"
-          >
-            <Calendar
-              mode="single"
-              selected={isoToDate(selectedDate)}
-              onSelect={handleDateChange}
-              locale={arSA}
-              dir="rtl"
-              className="rounded-[22px] bg-white"
-              classNames={{
-                months: "flex",
-                month: "space-y-4",
-                caption: "flex items-center justify-between px-2 pt-2",
-                caption_label: "text-base font-semibold text-slate-900",
-                nav: "flex items-center gap-2",
-                nav_button:
-                  "h-9 w-9 rounded-full border border-slate-200 bg-white p-0 text-slate-700 opacity-100 hover:bg-slate-100",
-                nav_button_previous: "static",
-                nav_button_next: "static",
-                head_row: "mt-2 flex w-full justify-between",
-                head_cell:
-                  "w-10 text-center text-xs font-semibold text-slate-400",
-                row: "mt-2 flex w-full justify-between",
-                cell: "h-10 w-10 p-0 text-center text-sm",
-                day:
-                  "h-10 w-10 rounded-2xl text-sm font-medium text-slate-700 hover:bg-slate-100",
-                day_today:
-                  "bg-slate-100 text-slate-900 ring-1 ring-slate-200",
-                day_selected:
-                  "bg-slate-900 text-white hover:bg-slate-900 hover:text-white focus:bg-slate-900 focus:text-white",
-                day_outside: "text-slate-300 opacity-60",
-              }}
-            />
-          </PopoverContent>
+        {isMobile ? (
+          <Drawer open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <DrawerContent className="rounded-t-[28px] border-none bg-white px-3 pb-6">
+              <DrawerHeader className="pb-2 text-center">
+                <DrawerTitle>اختيار التاريخ</DrawerTitle>
+                <DrawerDescription>
+                  اختر التاريخ ثم سيتم إرسال التقرير مباشرة.
+                </DrawerDescription>
+              </DrawerHeader>
+              <div className="mx-auto w-full max-w-sm rounded-[24px] bg-white p-2">
+                {calendarNode}
+              </div>
+            </DrawerContent>
 
-          <Button
-            onClick={handleSendWhatsApp}
-            size="lg"
-            className="w-full gap-2 text-base"
-          >
-            <Send className="h-5 w-5" />
-            إرسال التقرير واتساب
-          </Button>
-        </Popover>
+            <Button
+              onClick={handleSendWhatsApp}
+              size="lg"
+              className="w-full gap-2 text-base"
+            >
+              <Send className="h-5 w-5" />
+              إرسال التقرير واتساب
+            </Button>
+          </Drawer>
+        ) : (
+          <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-[28px] border-none bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+              <DialogHeader className="space-y-1 text-center">
+                <DialogTitle>اختيار التاريخ</DialogTitle>
+                <DialogDescription>
+                  اختر التاريخ ثم سيتم إرسال التقرير مباشرة.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mx-auto rounded-[24px] bg-white p-2">
+                {calendarNode}
+              </div>
+            </DialogContent>
+
+            <Button
+              onClick={handleSendWhatsApp}
+              size="lg"
+              className="w-full gap-2 text-base"
+            >
+              <Send className="h-5 w-5" />
+              إرسال التقرير واتساب
+            </Button>
+          </Dialog>
+        )}
       </main>
     </div>
   );
